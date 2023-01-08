@@ -3,30 +3,41 @@
 namespace App\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 class EmployeeController extends AbstractController
 {
-    #[Route('/employees',
-        name: 'get employees',
-        methods: ['GET'])]
-    public function getEmployees(): JsonResponse
+    private Security $security;
+
+    public function __construct(Security $security)
     {
-        return $this->json([
-            'message' => 'Welcome to your new controller!',
-            'path' => 'src/Controller/EmployeeController.php',
-        ]);
+        $this->security = $security;
     }
 
-    #[Route('/employees/{id}',
-        name: 'get employee by id',
-        methods: ['GET'])]
-    public function getEmployeeById($id): JsonResponse
+    #[Route('/employees/{id}', name: 'get employee', methods: ['GET'])]
+    public function index($id): JsonResponse
     {
+        $user = $this->security->getUser();
+
+        if ($user == null
+            || $id != $user->getEmployee()->getId()) {
+            return $this->json([
+                'message' => 'not authorized to access this employee details',
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $employee = $user->getEmployee();
         return $this->json([
-            'message' => $id,
-            'path' => 'src/Controller/EmployeeController.php',
-        ]);
+            'id' => $employee->getId(),
+            'firstName' => $employee->getFirstName(),
+            'lastName' => $employee->getLastName(),
+            'address' => $employee->getAddress(),
+        ], Response::HTTP_OK);
+
+
     }
+
 }
